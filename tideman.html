@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="utf-8" />
+  <title>Tideman method</title>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.17.0/vis.min.css" rel="stylesheet" type="text/css" />
   <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
   <style>
@@ -194,6 +196,11 @@
               if ($scope.current > $scope.scores.length-1) {
                 $scope.result = []
                 $scope.message = "All pairs have been added"
+                options.layout = {
+                    hierarchical: {
+                        direction: "UD"
+                    }
+                };
               }
             }, 2000);
 
@@ -301,6 +308,9 @@
               smooth: {
                 type: 'continuous'
               }
+            },
+            physics: {
+              stabilization: false
             }
           };
         var container = document.getElementById('mynetwork');
@@ -375,12 +385,9 @@
             Each line represents a preference order with the number of people choosing it at the beginning.
             <strong>123:A>B</strong> means 123 people have expressed the <strong>A>B</strong> vote.
           </p>
-
         </div>
         <div class="col-md-6 well" >
-
             <textarea style="width:100%; height:200px" ng-model="votes"></textarea>
-
         </div>
       </div>
       <hr/>
@@ -462,12 +469,21 @@
       <hr/>
       <div class="row" id="graph" >
         <div class="col-md-6">
-          <h3>The graph</h3>
+          <h3>The (no contradiction) graph</h3>
           <p>
             Then we build a graph, by adding pairs from the strongest to the weakest, unless
             it creates a cycle, then displayed in red.
-            <button class="btn btn-primary btn-block" ng-click="addPair();" ng-disabled="timeoutOn || !scores.length>0 ||allGreens()">Add a pair to the graph</button>
           </p>
+          <p>
+            The intuition is that such a cycle is a contradiction.
+          </p>
+          <p>
+            A wins over B who wins over C who wins over A makes it impossible to find a clear winner.
+          </p>
+          <p>
+            In this situation, this method <strong>chooses</strong> to ignore weak wins to favorise strong wins.
+          </p>
+          <button class="btn btn-primary btn-block" ng-click="addPair();" ng-disabled="timeoutOn || !scores.length>0 ||allGreens()">Add a pair to the graph</button>
         </div>
         <div id="graph" class="col-md-6">
           <div id="mynetwork" style="border:3px solid black;width: 100%;height: 300px; "></div>
@@ -480,10 +496,23 @@
             The result is extracted by finding a candidate that has only wins (positive scores against all opponents).
             We successively remove all such nodes in order.
           </p>
+          <p>
+            This method guarantees that if a candidate wins all one to one contests, he wins (this a called a Condorcet winner).
+          </p>
+          <p>
+            The % graph shows the percentage of voters who prefers the candidate.
+            This is used to suggest the amplitude of the victory.
+          </p>
           <button ng-click="showSources()" class="btn btn-primary btn-block" ng-disabled="timeoutOn || !allGreens() || noGreens()">Find a source</button>
         </div>
-        <div class="col-md-6">
-
+        <div class="col-md-3">
+          <h3>Rankings</h3>
+          <div ng-repeat="candidate in result">
+            <span class="btn btn-success"> {{$index+1}} </span> : <span> {{candidate}} </span>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <h3>% Graph</h3>
           <div ng-repeat="candidate in result">
             <span class="btn btn-success"> {{$index+1}} </span> : <span> {{candidate}} </span>
           </div>
