@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.17.0/vis.min.css" rel="stylesheet" type="text/css" />
+  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+  <style>
+    .dimmed {
+      opacity: 0.3;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.17.0/vis.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.6.0/angular.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/angular-translate/2.13.1/angular-translate.min.js"></script>
+  <script>
+    var app = angular.module('PreferentialDemo', ['pascalprecht.translate']);
+    app.controller('PrefController', function ($window,$scope, $http,$filter ,$timeout,$anchorScroll) {
+        $scope.votes = "5:A>C>B>E>D\n5:A>D>E>C>B\n8:B>E>D>A>C\n3:C>A>B>E>D\n"+
+        "7:C>A>E>B>D\n2:C>B>A>D>E\n7:D>C>E>B>A\n8:E>B>A>D>C";
+        $scope.parsedVotes = [];
+        $scope.scores = [];
+        $scope.candidates = [];
+        $scope.labelForID = function(id){
+          for (var i = 0 ; i < $scope.candidates.length ; i++){
+            var candA = $scope.candidates[i];
+            if (candA.id === id) return candA.label;
+          }
+        }
+        $scope.message = "Enter votes. The number before ':' is the count of this vote. 'A>B>C' means these voters prefer A over B and both over C "
+        $scope.parseVotes = function(){
+          $scope.message = "We take the textual votes and add them"
+          $scope.parsedVotes = [];
+          $scope.scores.length = 0;
+          $scope.candidates.length =0;
+          $scope.visEdges.clear();
+          $scope.visNodes.clear();
+          var lines = $scope.votes.split("\n");
+          var cand = [];
+          for (var i = 0 ; i< lines.length ; i++){
+            var numberAndVote = lines[i].split(":");
+            var number = Number(numberAndVote[0]);
+            var vote = numberAndVote[1];
+            var candidates = vote.split(">");
+            var newVote = {number:number , vote:[]};
+            for (var c = 0 ; c < candidates.length ; c++){
+              var candidate = candidates[c].trim();
+              cand.push(candidate);
+              newVote.vote.push(candidate);
+            }
+            $scope.parsedVotes.push(newVote);
+            console.log("Vote is "+newVote.number+"  :: "+ newVote.vote);
+          }
+          cand.sort();
+          console.log(cand);
+          $scope.candidatesSet = Array.from(new Set(cand));
+          var id = 1;
+          for (var i = 0 ; i < $scope.candidatesSet.length ; i++){
+            var candA = $scope.candidatesSet[i];
+            var node = {id:(i+1),label:candA};
+            $scope.candidates.push(node);
+            console.log("ADD a node");
+            $scope.visNodes.add(node);
+          }
+          console.log($scope.candidatesSet);
+          $anchorScroll('votes');
+        };
+
+        $scope.computeOneScore = function(){
+          console.log("score for "+$scope.a+" "+$scope.b);
+          var i = $scope.a ; var j = $scope.b;
+          var candA = $scope.candidatesSet[$scope.a];
+          var candB = $scope.candidatesSet[$scope.b];
+          var voteForA = 0;
+          var voteForB = 0;
+          for (var v = 0 ; v < $scope.parsedVotes.length ; v++){
+            var vote = $scope.parsedVotes[v];
+            var indexA = vote.vote.indexOf(candA);
+            var indexB = vote.vote.indexOf(candB);
+            //console.log("VOTE "+ vote.vote+"  candA" +candA + "  index " + indexA);
+            //console.log("VOTE "+ vote.vote+"  candB" +candB + "  index " + indexB);
+            if (indexA < indexB) voteForA += vote.number;
+            if (indexA > indexB) voteForB += vote.number;
+          }
+          var edge = {id:1000*i+j, from:(i+1), to:(j+1),arrows:'to',
+          label:voteForA-voteForB,color:'black',countW:voteForA, countL:voteForB};
+          if (voteForA < voteForB) {
+            edge = {id:1000*i+j, from:(j+1), to:(i+1),arrows:'to',
+            label:voteForB-voteForA,color:'black',countW:voteForB, countL:voteForA};
+          }
+          $scope.highlight(edge);
+          $scope.scores.push(edge);
+          if ($scope.a <= $scope.candidatesSet.length - 3 || $scope.b <= $scope.candidatesSet.length - 2){
+            $scope.b++;
+            if ($scope.b > $scope.candidatesSet.length - 1) {
+              $scope.a++;$scope.b=$scope.a+1;
+            }
+            $timeout(
+              $scope.computeOneScore
+              ,1000
+            );
+          }
+          else{
+            $timeout(function () {
+              $scope.timeoutOn = false;
+              $scope.rankPairs();
+            }, 2000);
+          }
+
+        }
+        $scope.computeScores = function(){
+          $scope.message = "For each pair of candidate, we go through votes to see who wins"
+          $scope.scores = [];
+          $anchorScroll('scores');
+          $scope.a = 0;
+          $scope.b = 1;
+          $scope.timeoutOn = true;
+          $scope.computeOneScore();
+        }
+        $scope.rankPairs = function(){
+          $scope.message = "We order the pairs by score difference"
+          $scope.scores = $filter('orderBy')($scope.scores, ['-label','-countW']);
+          $scope.current = 0;
+          $scope.greens = [];
+          $anchorScroll('scores');
+        }
+        $scope.addPair = function(){
+          $scope.message = "We add strongest pairs first, if a cycle IN RED is created we delete the latest addition"
+          var edge = $scope.scores[$scope.current];
+          edge.color = 'green';
+          $scope.visEdges.add(edge);
+          $scope.greens.push(edge);
+
+          $scope.detectCycle();
+        }
+        $scope.cycle = function(edges , startId, nodesExplored, edgesExplored){
+          for (var e = 0 ; e < edges.length ; e++){
+            var edge = edges[e];
+            if (edge.from === startId){
+              if (nodesExplored.length == 1) console.log("first level edge " +edge.from+ " "+edge.to);
+              var recEdges = edgesExplored.slice();
+              recEdges.push(edge);
+              var recNodes = nodesExplored.slice();
+              recNodes.push(edge.to);
+              if (nodesExplored.indexOf(edge.to) > -1){
+                //cycle
+                return recEdges;
+              }
+              else{
+                var recNodes = nodesExplored.slice();
+                recNodes.push(edge.to);
+                var recEdges = edgesExplored.slice();
+                recEdges.push(edge);
+                var recRes = $scope.cycle(edges,edge.to, recNodes,recEdges);
+                if (recRes.length > 0) return recRes;
+              }
+            }
+          }
+          return [];
+        }
+        $scope.allGreens = function(){
+          return $scope.current > $scope.scores.length-1;
+        }
+        $scope.noGreens = function(){
+          return $scope.greens.length < 1;
+        }
+        $scope.detectCycle = function(){
+          // we can start from the first node in the green
+          var starter = $scope.greens[$scope.greens.length-1].from;
+          console.log("Starter detect cycle " + starter);
+          console.log("detect cycle edges " + $scope.greens);
+          console.log($scope.greens);
+          var cycl = $scope.cycle($scope.greens,starter,[starter],[]);
+          console.log(cycl);
+          if (cycl.length > 0){
+            $scope.scores[$scope.current].cycled=true;
+            $scope.message = "This makes a cycle (in red) so in 2 seconds, we will remove the latest"
+            for (var c = 0 ; c < cycl.length ; c++){
+              var edge = cycl[c];
+              edge.color = 'red';
+              $scope.visEdges.update(edge);
+            }
+            $scope.timeoutOn = true;
+            $timeout(function(){
+              $scope.timeoutOn = false;
+              var edge = $scope.greens.pop();
+              $scope.visEdges.remove(edge);
+              for (var c = 0 ; c < $scope.greens.length ; c++){
+                var edge = $scope.greens[c];
+                edge.color = 'green';
+                $scope.visEdges.update(edge);
+              }
+              $scope.message = "Now we can go to the next pair"
+              if ($scope.current > $scope.scores.length-1) {
+                $scope.result = []
+                $scope.message = "All pairs have been added"
+              }
+            }, 2000);
+
+          }
+          else{
+            $scope.scores[$scope.current].added=true;
+            $scope.message = "This makes no cycle so we keep it"
+            if ($scope.allGreens()) {
+              $scope.result = []
+              $scope.message = "All pairs have been added"
+            }
+          }
+          console.log($scope.scores);
+          $scope.current++;
+        }
+        $scope.showSources = function(){
+          $scope.message = "We select a node with no incoming arrow"
+          for (var c = 0 ; c < $scope.candidates.length ; c++){
+            var candidate = $scope.candidates[c];
+            var incoming = 0;
+            var outgoing = 0;
+            for (var g = 0 ; g < $scope.greens.length ; g++){
+              var greenEdge = $scope.greens[g];
+              if (greenEdge.to === candidate.id) incoming++;
+              if (greenEdge.from === candidate.id) outgoing++;
+            }
+            if (incoming == 0 && outgoing != 0){
+              candidate.color = 'green';
+              $scope.visNodes.update(candidate);
+            }
+          }
+          $scope.timeoutOn = true;
+          $timeout(
+            function(){
+              $scope.moveOneSource();
+              $scope.timeoutOn = false;
+            }
+            ,2000);
+        }
+        $scope.highlight = function(score){
+          $scope.highlightFrom = $scope.labelForID(score.from);
+          $scope.highlightTo = $scope.labelForID(score.to);
+          console.log("Highlight " +$scope.highlightTo);
+          for (var v = 0 ; v < $scope.parsedVotes.length ; v++){
+            var vote = $scope.parsedVotes[v];
+            var indexA = vote.vote.indexOf($scope.highlightFrom);
+            var indexB = vote.vote.indexOf($scope.highlightTo);
+            if (indexA < indexB) {
+              $scope.parsedVotes[v].highlightScoreW = vote.number;
+              $scope.parsedVotes[v].highlightScoreL = "";
+            }
+            if (indexA > indexB) {
+              $scope.parsedVotes[v].highlightScoreL = vote.number;
+              $scope.parsedVotes[v].highlightScoreW = "";
+            }
+          }
+          $scope.score = score;
+          $anchorScroll('votes');
+        }
+        $scope.result = [];
+        // remove a source from the green graph and add it to the result (part of the topo sort)
+        $scope.moveOneSource = function(){
+          $scope.message = "Then we remove it from the graph and add it to the result"
+          // if there is only two remaining flush it at once.
+          if ($scope.greens.length == 1){
+            var lastOne = $scope.greens[0];
+            var to;
+            var from;
+            for (var c = 0 ; c < $scope.candidates.length ; c++){
+              var candidate = $scope.candidates[c];
+              if (lastOne.to === candidate.id) to = candidate;
+              if (lastOne.from === candidate.id) from = candidate;
+            }
+            if ($scope.result.indexOf(from.label) < 0)$scope.result.push(from.label);
+            if ($scope.result.indexOf(to.label) < 0)$scope.result.push(to.label);
+            $scope.visNodes.remove(from);
+            $scope.visNodes.remove(to);
+            $scope.greens.length = 0;
+            $scope.message = "Computation finished ";
+            return;
+          }
+          for (var c = 0 ; c < $scope.candidates.length ; c++){
+            var candidate = $scope.candidates[c];
+            if (candidate.color === 'green'){
+              if ($scope.result.indexOf(candidate.label) < 0)$scope.result.push(candidate.label);
+              $scope.visNodes.remove(candidate);
+              var filtered = $scope.greens.filter(function(edge){
+                  var res = (edge.to === candidate.id || edge.from === candidate.id);
+                  if (res) $scope.visEdges.remove(edge);
+                  return !res;
+              });
+              $scope.greens = filtered;
+            }
+          }
+        }
+        console.log("Started controller");
+        $scope.visNodes = new vis.DataSet($scope.candidates);
+        $scope.visEdges = new vis.DataSet($scope.scores);
+        var dataVis = {
+            nodes: $scope.visNodes,
+            edges: $scope.visEdges
+        };
+        var options = {
+            edges: {
+              smooth: {
+                type: 'continuous'
+              }
+            }
+          };
+        var container = document.getElementById('mynetwork');
+        var network = new vis.Network(container, dataVis, options);
+
+        $scope.stepString = 'compute';
+        $scope.step = function(){
+          if ($scope.stepString === 'sort'){
+            $scope.scores = $filter('orderBy')($scope.scores, '-label');
+            $scope.stepString = 'lock';
+          }
+          else if ($scope.stepString ==='compute'){
+            $scope.visEdges.update({
+                id: 10,
+                color:{color:'green'}
+            });
+          }
+        }
+    });
+  </script>
+</head>
+<body ng-app="PreferentialDemo" ng-controller="PrefController" style="position:relative;padding-bottom:50px;" data-spy="scroll" data-offset="70" data-target=".navbar">
+  <nav class="navbar navbar-inverse navbar-fixed-bottom" id="navb">
+    <div class="container">
+      <div class="navbar-header">
+        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navnav" aria-expanded="false">
+          <span class="sr-only">Toggle navigation</span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand">Pref Vote</a>
+      </div>
+      <div class="collapse navbar-collapse" id="navnav">
+        <ul class="nav navbar-nav">
+          <li><a href="#input">Input</a></li>
+          <li><a href="#votes">Votes</a></li>
+          <li><a href="#scores">Pairs (scores)</a></li>
+          <li><a href="#graph">Graph</a></li>
+          <li><a href="#result">Result</a></li>
+        </ul>
+        <ul class="nav navbar-nav navbar-right">
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+              {{'LANGUAGE' | translate}} <span class="caret"></span></a>
+            <ul class="dropdown-menu">
+              <li><a>Français</a></li>
+              <li><a>English</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div><!-- /.navbar-collapse -->
+    </div><!-- /.container-fluid -->
+    </nav>
+    <div class="container" >
+      <div class="row" id="input">
+        <div class="col-md-6">
+          <h3>Input</h3>
+          <p>
+            Each person vote by expressing preference.
+          </p>
+            <strong>A>B</strong> means the voter prefers A to B.
+          </p>
+          <p>
+            <strong>C=D</strong> means the voter likes them the same.
+          </p>
+          <p>
+            <strong>E>C=D>A</strong> means E is
+            the first choice, then C and D are the second choice and A would be the worst.
+          </p>
+          <p>
+            Each line represents a preference order with the number of people choosing it at the beginning.
+            <strong>123:A>B</strong> means 123 people have expressed the <strong>A>B</strong> vote.
+          </p>
+
+        </div>
+        <div class="col-md-6 well" >
+
+            <textarea style="width:100%; height:200px" ng-model="votes"></textarea>
+
+        </div>
+      </div>
+      <hr/>
+      <div class="row" id="votes">
+        <div class="col-md-6">
+          <h3>Votes</h3>
+          <p>
+            From the textual representation, we extract the information displayed here.
+          </p>
+          <button class="btn btn-primary btn-block" ng-click="parseVotes();" ng-disabled="timeoutOn" >Parse the votes</button>
+        </div>
+        <div class="col-md-6" >
+
+          <table class="table table-condensed table-striped">
+            <tr ng-repeat="vote in parsedVotes">
+              <td>{{vote.number}}</td>
+              <td>
+                <span ng-repeat="c in vote.vote">
+                  <span ng-class="(highlightFrom==c)?'label label-success':(highlightTo==c)?'label label-danger':highlightFrom?'label label-default dimmed':'label label-default'">
+                    {{c}}
+                  </span> &nbsp;
+                </span>
+              </td>
+              <td>
+                <span ng-show="vote.highlightScoreW>0">{{vote.highlightScoreW}} {{highlightFrom}}</span>
+              </td>
+              <td>
+                <span ng-show="vote.highlightScoreL>0">{{vote.highlightScoreL}} {{highlightTo}}</span>
+              </td>
+            </tr>
+            <tr ng-show="highlightFrom">
+              <td></td><td></td>
+              <td>{{score.countW}} {{highlightFrom}}</td>
+              <td>{{score.countL}} {{highlightTo}}</td>
+            </tr>
+          </table>
+        </div>
+
+      </div>
+      <hr/>
+      <div class="row" id="scores">
+        <div class="col-md-6">
+          <h3>One to one scores (or pairs)</h3>
+          <p>
+            Then we imagine all possible confrontation between two candidates X and Y.
+            For each vote we count if the voter prefers X to Y of the opposite.
+            This gives us a score for X>Y and another for Y>X.
+          </p>
+          <p>
+            If 25 prefer X to Y and 12 prefer Y to X, we create a pair X > Y with the score 25-12=13.
+          </p>
+          <p>
+            If 10 prefer X to Y and 12 prefer Y to X, we create a pair Y > X with the score 12-10=2.
+          </p>
+          <p>
+            When all pairs have been computed, we order the pairs by the score.
+          </p>
+          <button class="btn btn-primary btn-block" ng-click="computeScores();" ng-disabled="timeoutOn || !parsedVotes.length>0">Compute one to one scores</button>
+        </div>
+        <div  class="col-md-6" ng-class="timeoutOn?'alert alert-warning':''">
+
+          <table class="table table-condensed table-striped" >
+            <tr ng-repeat="score in scores "
+            ng-class="score.added?'info':score.cycled?'danger':''"
+            ng-click="highlight(score);">
+              <td>
+                <span class="text-success">{{score.countW}}</span> prefer <span class="badge badge-primary">{{labelForID(score.from)}}</span>
+                to <span class="badge badge-primary">{{labelForID(score.to)}}</span>
+              </td>
+              <td>
+                {{score.countL}} prefer <span class="badge badge-primary">{{labelForID(score.to)}}</span>
+                to <span class="badge badge-primary">{{labelForID(score.from)}}</span>
+              </td>
+              <td>Score = {{score.label }}</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      <hr/>
+      <div class="row" id="graph" >
+        <div class="col-md-6">
+          <h3>The graph</h3>
+          <p>
+            Then we build a graph, by adding pairs from the strongest to the weakest, unless
+            it creates a cycle, then displayed in red.
+            <button class="btn btn-primary btn-block" ng-click="addPair();" ng-disabled="timeoutOn || !scores.length>0 ||allGreens()">Add a pair to the graph</button>
+          </p>
+        </div>
+        <div id="graph" class="col-md-6">
+          <div id="mynetwork" style="border:3px solid black;width: 100%;height: 300px; "></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-6 ">
+          <h3>Result</h3>
+          <p>
+            The result is extracted by finding a candidate that has only wins (positive scores against all opponents).
+            We successively remove all such nodes in order.
+          </p>
+          <button ng-click="showSources()" class="btn btn-primary btn-block" ng-disabled="timeoutOn || !allGreens() || noGreens()">Find a source</button>
+        </div>
+        <div class="col-md-6">
+
+          <div ng-repeat="candidate in result">
+            <span class="btn btn-success"> {{$index+1}} </span> : <span> {{candidate}} </span>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-12 well">
+          <h3>References</h3>
+          <ul>
+            <li>Page wikipedia de tideman</li>
+            <li>Tri topologique</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+</body>
+</html>
