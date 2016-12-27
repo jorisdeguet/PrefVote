@@ -21,6 +21,10 @@
     app.config(function ($translateProvider) {
       $translateProvider.translations('en', {
         LANGUAGE: 'Language',
+        DATA: 'Data',
+        VOTES: 'Votes',
+        SCORES: 'Scores',
+        GRAPH: 'Graph',
         RESULT: 'Results'
       });
       $translateProvider.translations('fr', {
@@ -168,9 +172,10 @@
           $scope.message = "We add strongest pairs first, if a cycle IN RED is created we delete the latest addition"
           var edge = $scope.scores[$scope.current];
           edge.color = 'green';
-          $scope.visEdges.add(edge);
-          $scope.greens.push(edge);
-
+          if (edge.label != 0){
+            $scope.visEdges.add(edge);
+            $scope.greens.push(edge);
+          }
           $scope.detectCycle();
         }
         $scope.cycle = function(edges , startId, nodesExplored, edgesExplored){
@@ -392,9 +397,9 @@
       </div>
       <div class="collapse navbar-collapse" id="navnav">
         <ul class="nav navbar-nav">
-          <li><a href="#input">Input</a></li>
+          <li><a href="#input">{{'DATA'|translate}}</a></li>
           <li><a href="#votes">{{'VOTES'|translate}}</a></li>
-          <li><a href="#scores">Pairs (scores)</a></li>
+          <li><a href="#scores">{{'SCORES'|translate}}</a></li>
           <li><a href="#graph">{{'GRAPH'|translate}}</a></li>
           <li><a href="#result">{{'RESULT'|translate}}</a></li>
         </ul>
