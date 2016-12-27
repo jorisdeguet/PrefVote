@@ -44,6 +44,9 @@
           $scope.candidatesSet = [];
           $scope.greens = [];
           $scope.message = "";
+          $scope.score = undefined;
+          $scope.highlightFrom = undefined;
+          $scope.highlightTo = undefined;
           if ($scope.visEdges) $scope.visEdges.clear();
           if ($scope.visNodes) $scope.visNodes.clear();
           if ($scope.hierarEdges) $scope.hierarEdges.clear();
@@ -111,6 +114,7 @@
         };
 
         $scope.indexOf = function(vote, candidat){
+          console.log("indexOf "+ candidat + " dans "+ vote);
           for (var rank = 0 ; rank < vote.length ; rank++){
             var set = vote[rank];
             if (set.indexOf(candidat) > -1) return rank;
@@ -265,16 +269,22 @@
           $scope.message = "We select a node with no incoming arrow"
           for (var c = 0 ; c < $scope.candidates.length ; c++){
             var candidate = $scope.candidates[c];
-            var incoming = 0;
-            var outgoing = 0;
-            for (var g = 0 ; g < $scope.greens.length ; g++){
-              var greenEdge = $scope.greens[g];
-              if (greenEdge.to === candidate.id) incoming++;
-              if (greenEdge.from === candidate.id) outgoing++;
+            if ($scope.indexOf($scope.result,candidate.label) > -1){
+              console.log("HEY "+ candidate+" is already in result");
+              //continue;
             }
-            if (incoming == 0 && outgoing != 0){
-              candidate.color = 'green';
-              $scope.visNodes.update(candidate);
+            else{
+              var incoming = 0;
+              var outgoing = 0;
+              for (var g = 0 ; g < $scope.greens.length ; g++){
+                var greenEdge = $scope.greens[g];
+                if (greenEdge.to === candidate.id) incoming++;
+                if (greenEdge.from === candidate.id) outgoing++;
+              }
+              if (incoming == 0 ){
+                candidate.color = 'green';
+                $scope.visNodes.update(candidate);
+              }
             }
           }
           $scope.timeoutOn = true;
@@ -343,7 +353,6 @@
                     $scope.visEdges.remove(edge);
                   }
                   if (edge.from === candidate.id){
-                    // TODO compute percentage
                     edge.label = $filter('number')(100*(edge.countW)/($scope.totalVoters()), 0)+"%";
                     $scope.hierarEdges.add(edge);
                   }
@@ -381,13 +390,7 @@
             nodes: $scope.hierarNodes,
             edges: $scope.hierarEdges
         };
-        var hierarOptions = {
-          //layout: {
-          //    hierarchical: {
-          //        direction: "UD"
-          //    }
-          //}
-        };
+        var hierarOptions = {};
         var hierar_container = document.getElementById('hierar');
         var hierar = new vis.Network(hierar_container, hierarData, hierarOptions);
     });
@@ -513,7 +516,7 @@
           </p>
           <button class="btn btn-primary btn-block" ng-click="computeScores();" ng-disabled="timeoutOn || !parsedVotes.length>0">Compute one to one scores</button>
         </div>
-        <div  class="col-md-6" ng-class="timeoutOn?'alert alert-warning':''">
+        <div  class="col-md-6" >
 
           <table class="table table-condensed table-striped" >
             <tr ng-repeat="score in scores "
@@ -565,7 +568,7 @@
             The % graph shows the percentage of voters who prefers the candidate.
             This is used to suggest the amplitude of the victory.
           </p>
-          <button ng-click="showSources()" class="btn btn-primary btn-block" ng-disabled="timeoutOn || !allGreens() || noGreens()">Find a source</button>
+          <button ng-click="showSources()" class="btn btn-primary btn-block" ng-disabled="timeoutOn || !allGreens() ">Find a source</button>
         </div>
         <div class="col-md-2">
           <h3>Rankings</h3>
