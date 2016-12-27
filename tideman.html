@@ -16,6 +16,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.6.0/angular.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/angular-translate/2.13.1/angular-translate.min.js"></script>
   <script>
+    // could use http://cpettitt.github.io/project/dagre-d3/latest/demo/interactive-demo.html for graph
     var app = angular.module('PreferentialDemo', ['pascalprecht.translate']);
     app.controller('PrefController', function ($window,$scope, $http,$filter ,$timeout,$anchorScroll) {
         $scope.votes = "5:A>C>B>E>D\n5:A>D>E>C>B\n8:B>E>D>A>C\n3:C>A>B>E>D\n"+
@@ -47,8 +48,22 @@
             var newVote = {number:number , vote:[]};
             for (var c = 0 ; c < candidates.length ; c++){
               var candidate = candidates[c].trim();
-              cand.push(candidate);
-              newVote.vote.push(candidate);
+              // if it contains =
+              if (candidate.indexOf('=') > -1){
+                var exaequo = candidate.split('=');
+                var set = [];
+                for (var ex = 0 ; ex < exaequo.length ; ex++){
+                  var exOne = exaequo[ex];
+                  exOne = exOne.trim();
+                  set.push(exOne);
+                  cand.push(exOne);
+                }
+                newVote.vote.push(set);
+              }
+              else{
+                cand.push(candidate);
+                newVote.vote.push([candidate]);
+              }
             }
             $scope.parsedVotes.push(newVote);
             console.log("Vote is "+newVote.number+"  :: "+ newVote.vote);
@@ -63,10 +78,19 @@
             $scope.candidates.push(node);
             console.log("ADD a node");
             $scope.visNodes.add(node);
+            $scope.hierarNodes.add(node);
           }
           console.log($scope.candidatesSet);
           $anchorScroll('votes');
         };
+
+        $scope.indexOf = function(vote, candidat){
+          for (var rank = 0 ; rank < vote.length ; rank++){
+            var set = vote[rank];
+            if (set.indexOf(candidat) > -1) return rank;
+          }
+          return -1;
+        }
 
         $scope.computeOneScore = function(){
           console.log("score for "+$scope.a+" "+$scope.b);
@@ -77,8 +101,8 @@
           var voteForB = 0;
           for (var v = 0 ; v < $scope.parsedVotes.length ; v++){
             var vote = $scope.parsedVotes[v];
-            var indexA = vote.vote.indexOf(candA);
-            var indexB = vote.vote.indexOf(candB);
+            var indexA = $scope.indexOf(vote.vote,candA);
+            var indexB = $scope.indexOf(vote.vote,candB);
             //console.log("VOTE "+ vote.vote+"  candA" +candA + "  index " + indexA);
             //console.log("VOTE "+ vote.vote+"  candB" +candB + "  index " + indexB);
             if (indexA < indexB) voteForA += vote.number;
@@ -196,14 +220,8 @@
               if ($scope.current > $scope.scores.length-1) {
                 $scope.result = []
                 $scope.message = "All pairs have been added"
-                options.layout = {
-                    hierarchical: {
-                        direction: "UD"
-                    }
-                };
               }
             }, 2000);
-
           }
           else{
             $scope.scores[$scope.current].added=true;
@@ -246,15 +264,19 @@
           console.log("Highlight " +$scope.highlightTo);
           for (var v = 0 ; v < $scope.parsedVotes.length ; v++){
             var vote = $scope.parsedVotes[v];
-            var indexA = vote.vote.indexOf($scope.highlightFrom);
-            var indexB = vote.vote.indexOf($scope.highlightTo);
+            var indexA = $scope.indexOf(vote.vote,$scope.highlightFrom);
+            var indexB = $scope.indexOf(vote.vote,$scope.highlightTo);
             if (indexA < indexB) {
               $scope.parsedVotes[v].highlightScoreW = vote.number;
               $scope.parsedVotes[v].highlightScoreL = "";
             }
-            if (indexA > indexB) {
+            else if (indexA > indexB) {
               $scope.parsedVotes[v].highlightScoreL = vote.number;
               $scope.parsedVotes[v].highlightScoreW = "";
+            }
+            else{
+              $scope.parsedVotes[v].highlightScoreW = "";
+              $scope.parsedVotes[v].highlightScoreL = "";
             }
           }
           $scope.score = score;
@@ -289,12 +311,26 @@
               $scope.visNodes.remove(candidate);
               var filtered = $scope.greens.filter(function(edge){
                   var res = (edge.to === candidate.id || edge.from === candidate.id);
-                  if (res) $scope.visEdges.remove(edge);
+                  if (res) {
+                    $scope.visEdges.remove(edge);
+                  }
+                  if (edge.from === candidate.id){
+                    // TODO compute percentage
+                    edge.label = $filter('number')(100*(edge.countW)/($scope.totalVoters()), 0)+"%";
+                    $scope.hierarEdges.add(edge);
+                  }
                   return !res;
               });
               $scope.greens = filtered;
             }
           }
+        }
+        $scope.totalVoters = function(){
+          var n = 0 ;
+          for (var v = 0 ; v < $scope.parsedVotes.length ; v++){
+            n += $scope.parsedVotes[v].number;
+          }
+          return n;
         }
         console.log("Started controller");
         $scope.visNodes = new vis.DataSet($scope.candidates);
@@ -304,31 +340,27 @@
             edges: $scope.visEdges
         };
         var options = {
-            edges: {
-              smooth: {
-                type: 'continuous'
-              }
-            },
-            physics: {
-              stabilization: false
-            }
-          };
+            edges: {    smooth: {type: 'continuous'}    },
+            physics: {stabilization: false}
+        };
         var container = document.getElementById('mynetwork');
         var network = new vis.Network(container, dataVis, options);
 
-        $scope.stepString = 'compute';
-        $scope.step = function(){
-          if ($scope.stepString === 'sort'){
-            $scope.scores = $filter('orderBy')($scope.scores, '-label');
-            $scope.stepString = 'lock';
-          }
-          else if ($scope.stepString ==='compute'){
-            $scope.visEdges.update({
-                id: 10,
-                color:{color:'green'}
-            });
-          }
-        }
+        $scope.hierarNodes = new vis.DataSet([]);
+        $scope.hierarEdges = new vis.DataSet([]);
+        var hierarData = {
+            nodes: $scope.hierarNodes,
+            edges: $scope.hierarEdges
+        };
+        var hierarOptions = {
+          //layout: {
+          //    hierarchical: {
+          //        direction: "UD"
+          //    }
+          //}
+        };
+        var hierar_container = document.getElementById('hierar');
+        var hierar = new vis.Network(hierar_container, hierarData, hierarOptions);
     });
   </script>
 </head>
@@ -397,6 +429,9 @@
           <p>
             From the textual representation, we extract the information displayed here.
           </p>
+          <!--<div ng-repeat="parsed in parsedVotes">
+            {{parsed | json}}
+          </div>-->
           <button class="btn btn-primary btn-block" ng-click="parseVotes();" ng-disabled="timeoutOn" >Parse the votes</button>
         </div>
         <div class="col-md-6" >
@@ -405,11 +440,13 @@
             <tr ng-repeat="vote in parsedVotes">
               <td>{{vote.number}}</td>
               <td>
-                <span ng-repeat="c in vote.vote">
-                  <span ng-class="(highlightFrom==c)?'label label-success':(highlightTo==c)?'label label-danger':highlightFrom?'label label-default dimmed':'label label-default'">
+                <span ng-repeat="v in vote.vote">
+                  <span ng-hide="$index == 0" class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span>
+                  <span ng-repeat="c in v" ng-class="(highlightFrom==c)?'label label-success':(highlightTo==c)?'label label-danger':highlightFrom?'label label-default dimmed':'label label-default'">
                     {{c}}
-                  </span> &nbsp;
+                  </span>
                 </span>
+
               </td>
               <td>
                 <span ng-show="vote.highlightScoreW>0">{{vote.highlightScoreW}} {{highlightFrom}}</span>
@@ -513,9 +550,7 @@
         </div>
         <div class="col-md-3">
           <h3>% Graph</h3>
-          <div ng-repeat="candidate in result">
-            <span class="btn btn-success"> {{$index+1}} </span> : <span> {{candidate}} </span>
-          </div>
+          <div id="hierar" style="border:3px solid black;width: 100%;height: 300px; "></div>
         </div>
       </div>
       <div class="row">
