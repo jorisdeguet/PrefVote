@@ -18,7 +18,18 @@
   <script>
     // could use http://cpettitt.github.io/project/dagre-d3/latest/demo/interactive-demo.html for graph
     var app = angular.module('PreferentialDemo', ['pascalprecht.translate']);
-    app.controller('PrefController', function ($window,$scope, $http,$filter ,$timeout,$anchorScroll) {
+    app.config(function ($translateProvider) {
+      $translateProvider.translations('en', {
+        LANGUAGE: 'Language',
+        RESULT: 'Results'
+      });
+      $translateProvider.translations('fr', {
+        LANGUAGE: 'Langue',
+        RESULT: 'Résultats'
+      });
+      $translateProvider.preferredLanguage('en');
+    });
+    app.controller('PrefController', function ($window,$scope, $http,$filter ,$timeout,$anchorScroll,$translate) {
         $scope.votes = "5:A>C>B>E>D\n5:A>D>E>C>B\n8:B>E>D>A>C\n3:C>A>B>E>D\n"+
         "7:C>A>E>B>D\n2:C>B>A>D>E\n7:D>C>E>B>A\n8:E>B>A>D>C";
         $scope.parsedVotes = [];
@@ -30,6 +41,9 @@
             if (candA.id === id) return candA.label;
           }
         }
+        $scope.changeLanguage = function (key) {
+          $translate.use(key);
+        };
         $scope.message = "Enter votes. The number before ':' is the count of this vote. 'A>B>C' means these voters prefer A over B and both over C "
         $scope.parseVotes = function(){
           $scope.message = "We take the textual votes and add them"
@@ -379,18 +393,18 @@
       <div class="collapse navbar-collapse" id="navnav">
         <ul class="nav navbar-nav">
           <li><a href="#input">Input</a></li>
-          <li><a href="#votes">Votes</a></li>
+          <li><a href="#votes">{{'VOTES'|translate}}</a></li>
           <li><a href="#scores">Pairs (scores)</a></li>
-          <li><a href="#graph">Graph</a></li>
-          <li><a href="#result">Result</a></li>
+          <li><a href="#graph">{{'GRAPH'|translate}}</a></li>
+          <li><a href="#result">{{'RESULT'|translate}}</a></li>
         </ul>
         <ul class="nav navbar-nav navbar-right">
           <li class="dropdown">
             <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
               {{'LANGUAGE' | translate}} <span class="caret"></span></a>
             <ul class="dropdown-menu">
-              <li><a>Français</a></li>
-              <li><a>English</a></li>
+              <li><a ng-click="changeLanguage('fr')">Français</a></li>
+              <li><a ng-click="changeLanguage('en')">English</a></li>
             </ul>
           </li>
         </ul>
@@ -528,7 +542,7 @@
       </div>
       <div class="row">
         <div class="col-md-6 ">
-          <h3>Result</h3>
+          <h3>{{'RESULT'|translate}}</h3>
           <p>
             The result is extracted by finding a candidate that has only wins (positive scores against all opponents).
             We successively remove all such nodes in order.
