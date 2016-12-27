@@ -36,9 +36,22 @@
     app.controller('PrefController', function ($window,$scope, $http,$filter ,$timeout,$anchorScroll,$translate) {
         $scope.votes = "5:A>C>B>E>D\n5:A>D>E>C>B\n8:B>E>D>A>C\n3:C>A>B>E>D\n"+
         "7:C>A>E>B>D\n2:C>B>A>D>E\n7:D>C>E>B>A\n8:E>B>A>D>C";
-        $scope.parsedVotes = [];
-        $scope.scores = [];
-        $scope.candidates = [];
+        $scope.init = function(){
+          $scope.parsedVotes = [];
+          $scope.scores = [];
+          $scope.result = [];
+          $scope.candidates = [];
+          $scope.candidatesSet = [];
+          $scope.greens = [];
+          $scope.message = "";
+          if ($scope.visEdges) $scope.visEdges.clear();
+          if ($scope.visNodes) $scope.visNodes.clear();
+          if ($scope.hierarEdges) $scope.hierarEdges.clear();
+          if ($scope.hierarNodes) $scope.hierarNodes.clear();
+          $scope.a = 0;
+          $scope.b = 0;
+        }
+        $scope.init();
         $scope.labelForID = function(id){
           for (var i = 0 ; i < $scope.candidates.length ; i++){
             var candA = $scope.candidates[i];
@@ -48,14 +61,9 @@
         $scope.changeLanguage = function (key) {
           $translate.use(key);
         };
-        $scope.message = "Enter votes. The number before ':' is the count of this vote. 'A>B>C' means these voters prefer A over B and both over C "
         $scope.parseVotes = function(){
           $scope.message = "We take the textual votes and add them"
-          $scope.parsedVotes = [];
-          $scope.scores.length = 0;
-          $scope.candidates.length =0;
-          $scope.visEdges.clear();
-          $scope.visNodes.clear();
+          $scope.init();
           var lines = $scope.votes.split("\n");
           var cand = [];
           for (var i = 0 ; i< lines.length ; i++){
@@ -141,14 +149,14 @@
             }
             $timeout(
               $scope.computeOneScore
-              ,1000
+              ,500
             );
           }
           else{
             $timeout(function () {
               $scope.timeoutOn = false;
               $scope.rankPairs();
-            }, 2000);
+            }, 1000);
           }
 
         }
@@ -240,7 +248,7 @@
                 $scope.result = []
                 $scope.message = "All pairs have been added"
               }
-            }, 2000);
+            }, 1000);
           }
           else{
             $scope.scores[$scope.current].added=true;
@@ -275,7 +283,7 @@
               $scope.moveOneSource();
               $scope.timeoutOn = false;
             }
-            ,2000);
+            ,1000);
         }
         $scope.highlight = function(score){
           $scope.highlightFrom = $scope.labelForID(score.from);
@@ -306,7 +314,7 @@
         $scope.moveOneSource = function(){
           $scope.message = "Then we remove it from the graph and add it to the result"
           // if there is only two remaining flush it at once.
-          if ($scope.greens.length == 1){
+          /*if ($scope.greens.length == 1){
             var lastOne = $scope.greens[0];
             var to;
             var from;
@@ -315,18 +323,19 @@
               if (lastOne.to === candidate.id) to = candidate;
               if (lastOne.from === candidate.id) from = candidate;
             }
-            if ($scope.result.indexOf(from.label) < 0)$scope.result.push(from.label);
-            if ($scope.result.indexOf(to.label) < 0)$scope.result.push(to.label);
+            if ($scope.indexOf($scope.result,from.label) < 0)$scope.result.push([from.label]);
+            if ($scope.indexOf($scope.result,to.label) < 0)$scope.result.push([to.label]);
             $scope.visNodes.remove(from);
             $scope.visNodes.remove(to);
             $scope.greens.length = 0;
             $scope.message = "Computation finished ";
             return;
-          }
+          }*/
+          var set=[];
           for (var c = 0 ; c < $scope.candidates.length ; c++){
             var candidate = $scope.candidates[c];
             if (candidate.color === 'green'){
-              if ($scope.result.indexOf(candidate.label) < 0)$scope.result.push(candidate.label);
+              if ($scope.indexOf($scope.result,candidate.label) < 0)set.push(candidate.label);
               $scope.visNodes.remove(candidate);
               var filtered = $scope.greens.filter(function(edge){
                   var res = (edge.to === candidate.id || edge.from === candidate.id);
@@ -343,6 +352,7 @@
               $scope.greens = filtered;
             }
           }
+          $scope.result.push(set);
         }
         $scope.totalVoters = function(){
           var n = 0 ;
@@ -514,8 +524,7 @@
                 to <span class="badge badge-primary">{{labelForID(score.to)}}</span>
               </td>
               <td>
-                {{score.countL}} prefer <span class="badge badge-primary">{{labelForID(score.to)}}</span>
-                to <span class="badge badge-primary">{{labelForID(score.from)}}</span>
+                vs. {{score.countL}}
               </td>
               <td>Score = {{score.label }}</td>
             </tr>
@@ -531,10 +540,7 @@
             it creates a cycle, then displayed in red.
           </p>
           <p>
-            The intuition is that such a cycle is a contradiction.
-          </p>
-          <p>
-            A wins over B who wins over C who wins over A makes it impossible to find a clear winner.
+            The intuition is that such a cycle is a contradiction. A wins over B who wins over C who wins over A makes it impossible to find a clear winner.
           </p>
           <p>
             In this situation, this method <strong>chooses</strong> to ignore weak wins to favorise strong wins.
@@ -561,13 +567,13 @@
           </p>
           <button ng-click="showSources()" class="btn btn-primary btn-block" ng-disabled="timeoutOn || !allGreens() || noGreens()">Find a source</button>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
           <h3>Rankings</h3>
-          <div ng-repeat="candidate in result">
-            <span class="btn btn-success"> {{$index+1}} </span> : <span> {{candidate}} </span>
+          <div ng-repeat="set in result">
+            <span class="btn btn-success"> {{$index+1}} </span> : <span class="badge badge-info" ng-repeat="candidate in set"> {{candidate}} </span>
           </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
           <h3>% Graph</h3>
           <div id="hierar" style="border:3px solid black;width: 100%;height: 300px; "></div>
         </div>
