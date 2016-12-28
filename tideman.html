@@ -21,21 +21,50 @@
     app.config(function ($translateProvider) {
       $translateProvider.translations('en', {
         LANGUAGE: 'Language',
+        EXAMPLES: 'Examples',
         DATA: 'Data',
         VOTES: 'Votes',
         SCORES: 'Scores',
         GRAPH: 'Graph',
-        RESULT: 'Results'
+        RESULT: 'Results',
+
+        BTN_PARSE_VOTES :  'Parse the votes',
+        BTN_COMPUTE_SCORES :  'Compute one-to-one scores',
+
+        P_PREFERENCES :  'Each person vote by expressing preference.',
+        P_A_OVER_B :  'means the voter prefers A to B.',
+        P_C_EQUAL_D : 'means the voter likes them the same.'
       });
       $translateProvider.translations('fr', {
         LANGUAGE: 'Langue',
-        RESULT: 'Résultats'
+        EXAMPLES: 'Exemples',
+        DATA: 'Données',
+        VOTES: 'Votes',
+        SCORES: 'Scores',
+        GRAPH: 'Graphe',
+        RESULT: 'Résultats',
+
+        BTN_PARSE_VOTES :  'Extraire les votes',
+        BTN_COMPUTE_SCORES :  'Calculer les résultats paire par paire',
+
+        P_PREFERENCES :  'Chaque électeur exprime ses préférences.',
+        P_A_OVER_B :  'signifie que l\'électeur préfère A à B.',
+        P_C_EQUAL_D : 'signifie que l\'électeur les situe au même niveau.'
       });
-      $translateProvider.preferredLanguage('en');
+      //$translateProvider.determinePreferredLanguage();
+      $translateProvider.preferredLanguage('fr');
     });
     app.controller('PrefController', function ($window,$scope, $http,$filter ,$timeout,$anchorScroll,$translate) {
         $scope.votes = "5:A>C>B>E>D\n5:A>D>E>C>B\n8:B>E>D>A>C\n3:C>A>B>E>D\n"+
         "7:C>A>E>B>D\n2:C>B>A>D>E\n7:D>C>E>B>A\n8:E>B>A>D>C";
+        $scope.memphis = function(){
+          $scope.votes =
+          "42:Memphis>Nashville>Chattanooga>Knoxville\n"+
+          "26:Nashville>Chattanooga>Knoxville>Memphis\n"+
+          "15:Chattanooga>Knoxville>Nashville>Memphis\n"+
+          "17:Knoxville>Chattanooga>Nashville>Memphis\n";
+          $scope.init();
+        }
         $scope.init = function(){
           $scope.parsedVotes = [];
           $scope.scores = [];
@@ -71,6 +100,7 @@
           var cand = [];
           for (var i = 0 ; i< lines.length ; i++){
             var numberAndVote = lines[i].split(":");
+            if (numberAndVote.length != 2) continue;
             var number = Number(numberAndVote[0]);
             var vote = numberAndVote[1];
             var candidates = vote.split(">");
@@ -162,8 +192,8 @@
               $scope.rankPairs();
             }, 1000);
           }
-
         }
+
         $scope.computeScores = function(){
           $scope.message = "For each pair of candidate, we go through votes to see who wins"
           $scope.scores = [];
@@ -173,6 +203,7 @@
           $scope.timeoutOn = true;
           $scope.computeOneScore();
         }
+
         $scope.rankPairs = function(){
           $scope.message = "We order the pairs by score difference"
           $scope.scores = $filter('orderBy')($scope.scores, ['-label','-countW']);
@@ -180,6 +211,7 @@
           $scope.greens = [];
           $anchorScroll('scores');
         }
+
         $scope.addPair = function(){
           $scope.message = "We add strongest pairs first, if a cycle IN RED is created we delete the latest addition"
           var edge = $scope.scores[$scope.current];
@@ -190,6 +222,7 @@
           }
           $scope.detectCycle();
         }
+
         $scope.cycle = function(edges , startId, nodesExplored, edgesExplored){
           for (var e = 0 ; e < edges.length ; e++){
             var edge = edges[e];
@@ -215,12 +248,8 @@
           }
           return [];
         }
-        $scope.allGreens = function(){
-          return $scope.current > $scope.scores.length-1;
-        }
-        $scope.noGreens = function(){
-          return $scope.greens.length < 1;
-        }
+        $scope.allGreens = function() {return $scope.current > $scope.scores.length-1;}
+        $scope.noGreens = function()  {return $scope.greens.length < 1;}
         $scope.detectCycle = function(){
           // we can start from the first node in the green
           var starter = $scope.greens[$scope.greens.length-1].from;
@@ -370,6 +399,15 @@
           }
           return n;
         }
+        $scope.allDone = function(){
+          for (var c = 0 ; c < $scope.candidates.length ; c++){
+            var candidate = $scope.candidates[c];
+            if ($scope.indexOf($scope.result,candidate.label) < 0){
+              return false;
+            }
+          }
+          return true;
+        }
         console.log("Started controller");
         $scope.visNodes = new vis.DataSet($scope.candidates);
         $scope.visEdges = new vis.DataSet($scope.scores);
@@ -419,6 +457,16 @@
         <ul class="nav navbar-nav navbar-right">
           <li class="dropdown">
             <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+              {{'EXAMPLES' | translate}} <span class="caret"></span></a>
+            <ul class="dropdown-menu">
+              <li><a ng-click="">Wikipedia.fr</a></li>
+              <li><a ng-click="memphis()">Memphis Chattanooga</a></li>
+            </ul>
+          </li>
+        </ul>
+        <ul class="nav navbar-nav navbar-right">
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
               {{'LANGUAGE' | translate}} <span class="caret"></span></a>
             <ul class="dropdown-menu">
               <li><a ng-click="changeLanguage('fr')">Français</a></li>
@@ -431,49 +479,51 @@
     </nav>
     <div class="container" >
       <div class="row" id="input">
-        <div class="col-md-6">
-          <h3>Input</h3>
+        <div class="col-md-5">
+          <h3>{{'DATA' | translate}}</h3>
           <p>
-            Each person vote by expressing preference.
+            {{'P_PREFERENCES' | translate}}
           </p>
-            <strong>A>B</strong> means the voter prefers A to B.
+            <strong>A>B</strong> {{'P_A_OVER_B' | translate}}
           </p>
           <p>
-            <strong>C=D</strong> means the voter likes them the same.
+            <strong>C=D</strong> {{'P_C_EQUAL_D' | translate}}
           </p>
           <p>
             <strong>E>C=D>A</strong> means E is
             the first choice, then C and D are the second choice and A would be the worst.
           </p>
           <p>
-            Each line represents a preference order with the number of people choosing it at the beginning.
             <strong>123:A>B</strong> means 123 people have expressed the <strong>A>B</strong> vote.
           </p>
+          <p>
+            Each line corresponds to a different preferential vote with the number of people voting it.
+          </p>
         </div>
-        <div class="col-md-6 well" >
+        <div class="col-md-7 well" >
             <textarea style="width:100%; height:200px" ng-model="votes"></textarea>
         </div>
       </div>
       <hr/>
       <div class="row" id="votes">
-        <div class="col-md-6">
-          <h3>Votes</h3>
+        <div class="col-md-4">
+          <h3>{{'VOTES' | translate}}</h3>
           <p>
             From the textual representation, we extract the information displayed here.
           </p>
           <!--<div ng-repeat="parsed in parsedVotes">
             {{parsed | json}}
           </div>-->
-          <button class="btn btn-primary btn-block" ng-click="parseVotes();" ng-disabled="timeoutOn" >Parse the votes</button>
+          <button class="btn btn-primary btn-block" ng-click="parseVotes();" ng-disabled="timeoutOn" >{{'BTN_PARSE_VOTES' | translate}}</button>
         </div>
-        <div class="col-md-6" >
+        <div class="col-md-8" >
 
           <table class="table table-condensed table-striped">
             <tr ng-repeat="vote in parsedVotes">
-              <td>{{vote.number}}</td>
+              <td>{{vote.number}} <span class="glyphicon glyphicon-user" aria-hidden="true"></span></td>
               <td>
                 <span ng-repeat="v in vote.vote">
-                  <span ng-hide="$index == 0" class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span>
+                  <span ng-hide="$index == 0" class="glyphicon glyphicon-triangle-right" aria-hidden="true"></span>
                   <span ng-repeat="c in v" ng-class="(highlightFrom==c)?'label label-success':(highlightTo==c)?'label label-danger':highlightFrom?'label label-default dimmed':'label label-default'">
                     {{c}}
                   </span>
@@ -498,7 +548,7 @@
       </div>
       <hr/>
       <div class="row" id="scores">
-        <div class="col-md-6">
+        <div class="col-md-4">
           <h3>One to one scores (or pairs)</h3>
           <p>
             Then we imagine all possible confrontation between two candidates X and Y.
@@ -514,22 +564,23 @@
           <p>
             When all pairs have been computed, we order the pairs by the score.
           </p>
-          <button class="btn btn-primary btn-block" ng-click="computeScores();" ng-disabled="timeoutOn || !parsedVotes.length>0">Compute one to one scores</button>
+          <button class="btn btn-primary btn-block" ng-click="computeScores();" ng-disabled="timeoutOn || !parsedVotes.length>0">{{'BTN_COMPUTE_SCORES' | translate}}</button>
         </div>
-        <div  class="col-md-6" >
+        <div  class="col-md-8" >
 
           <table class="table table-condensed table-striped" >
             <tr ng-repeat="score in scores "
             ng-class="score.added?'info':score.cycled?'danger':''"
             ng-click="highlight(score);">
               <td>
-                <span class="text-success">{{score.countW}}</span> prefer <span class="badge badge-primary">{{labelForID(score.from)}}</span>
-                to <span class="badge badge-primary">{{labelForID(score.to)}}</span>
+                <span class="text-success">{{score.countW}}</span>
+                <span class="label label-success">{{labelForID(score.from)}}</span>
+                <span class="glyphicon glyphicon-triangle-right" aria-hidden="true"></span>
+                <span class="label label-danger">{{labelForID(score.to)}}</span>
+                <span class="text-danger">{{score.countL}}</span>
               </td>
-              <td>
-                vs. {{score.countL}}
-              </td>
-              <td>Score = {{score.label }}</td>
+              <td>Score = {{score.countW}} - {{score.countL}} ={{score.label }}</td>
+              <td>{{100*score.countW/(score.countL+score.countW) | number:1 }} % </td>
             </tr>
           </table>
         </div>
@@ -555,7 +606,7 @@
         </div>
       </div>
       <div class="row">
-        <div class="col-md-6 ">
+        <div class="col-md-4 ">
           <h3>{{'RESULT'|translate}}</h3>
           <p>
             The result is extracted by finding a candidate that has only wins (positive scores against all opponents).
@@ -568,9 +619,9 @@
             The % graph shows the percentage of voters who prefers the candidate.
             This is used to suggest the amplitude of the victory.
           </p>
-          <button ng-click="showSources()" class="btn btn-primary btn-block" ng-disabled="timeoutOn || !allGreens() ">Find a source</button>
+          <button ng-click="showSources()" class="btn btn-primary btn-block" ng-disabled="timeoutOn || !allGreens() || allDone()">Find a source</button>
         </div>
-        <div class="col-md-2">
+        <div class="col-md-4">
           <h3>Rankings</h3>
           <div ng-repeat="set in result">
             <span class="btn btn-success"> {{$index+1}} </span> : <span class="badge badge-info" ng-repeat="candidate in set"> {{candidate}} </span>
