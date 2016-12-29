@@ -15,7 +15,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.17.0/vis.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.6.0/angular.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/angular-translate/2.13.1/angular-translate.min.js"></script>
-  <script src="https://raw.githubusercontent.com/kswedberg/jquery-smooth-scroll/master/jquery.smooth-scroll.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-smooth-scroll/2.0.0/jquery.smooth-scroll.min.js"></script>
   <script>
     $(document).ready(function(){
       $('a').smoothScroll();
@@ -109,7 +109,8 @@
       //$translateProvider.determinePreferredLanguage();
       $translateProvider.preferredLanguage('fr');
     });
-    app.controller('PrefController', function ($window,$scope, $http,$filter ,$timeout,$anchorScroll,$translate) {
+    app.controller('PrefController', function ($window,$scope, $http,$filter ,$timeout,$anchorScroll,$translate,$location) {
+        console.log("locale "+ $location.search.l);
         $scope.votes = "5:A>C>B>E>D\n5:A>D>E>C>B\n8:B>E>D>A>C\n3:C>A>B>E>D\n"+
         "7:C>A>E>B>D\n2:C>B>A>D>E\n7:D>C>E>B>A\n8:E>B>A>D>C";
         $scope.memphis = function(){
