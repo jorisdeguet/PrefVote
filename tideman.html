@@ -504,7 +504,7 @@
           <span class="icon-bar"></span>
           <span class="icon-bar"></span>
         </button>
-        <a class="navbar-brand">Pref Vote</a>
+        <a href="https://en.wikipedia.org/wiki/Ranked_pairs" class="navbar-brand">Tideman</a>
       </div>
       <div class="collapse navbar-collapse" id="navnav">
         <ul class="nav navbar-nav">
@@ -552,10 +552,9 @@
             <textarea style="width:100%; height:200px" ng-model="votes"></textarea>
         </div>
       </div>
-      <hr/>
       <div class="row" id="votes">
+        <button class="btn btn-primary btn-block" ng-click="parseVotes();" ng-disabled="timeoutOn" >{{'BTN_PARSE_VOTES' | translate}}</button>
         <div class="col-md-4">
-          <button class="btn btn-primary btn-block" ng-click="parseVotes();" ng-disabled="timeoutOn" >{{'BTN_PARSE_VOTES' | translate}}</button>
           <h3>{{'VOTES' | translate}}</h3>
           <p>{{'P_EXTRACT_VOTES' | translate}}</p>
           <!--<div ng-repeat="parsed in parsedVotes">
@@ -592,10 +591,9 @@
         </div>
 
       </div>
-      <hr/>
       <div class="row" id="scores">
+        <button class="btn btn-primary btn-block" ng-click="computeScores();" ng-disabled="timeoutOn || !parsedVotes.length>0">{{'BTN_COMPUTE_SCORES' | translate}}</button>
         <div class="col-md-5">
-          <button class="btn btn-primary btn-block" ng-click="computeScores();" ng-disabled="timeoutOn || !parsedVotes.length>0">{{'BTN_COMPUTE_SCORES' | translate}}</button>
           <h3>{{'ONE_TO_ONE_SCORES'| translate}}</h3>
           <p>{{'P_POSSIBLE_CONFRONTATIONS'| translate}}</p>
           <p>{{'P_25_OVER_12'| translate}}</p>
@@ -621,10 +619,9 @@
           </table>
         </div>
       </div>
-      <hr/>
       <div class="row" id="graph" >
+        <button class="btn btn-primary btn-block" ng-click="addPair();" ng-disabled="timeoutOn || !scores.length>0 ||allGreens()">{{'BTN_ADD_TO_GRAPH' | translate}}</button>
         <div class="col-md-6">
-          <button class="btn btn-primary btn-block" ng-click="addPair();" ng-disabled="timeoutOn || !scores.length>0 ||allGreens()">{{'BTN_ADD_TO_GRAPH' | translate}}</button>
           <h3>{{'NO_CONTRADICTION_GRAPH' | translate}}</h3>
           <p>{{'P_BUILD_GRAPH'|translate}}</p>
           <p>{{'P_INTUITION'|translate}}</p>
@@ -635,8 +632,8 @@
         </div>
       </div>
       <div class="row">
+        <button ng-click="showSources()" class="btn btn-primary btn-block" ng-disabled="timeoutOn || !allGreens() || allDone()">{{'BTN_FIND_SOURCE' | translate}}</button>
         <div class="col-md-4 ">
-          <button ng-click="showSources()" class="btn btn-primary btn-block" ng-disabled="timeoutOn || !allGreens() || allDone()">{{'BTN_FIND_SOURCE' | translate}}</button>
           <h3>{{'RESULT'|translate}}</h3>
           <p>{{'P_EXTRACT_WINNER'|translate}}</p>
           <p>{{'P_CONDORCET'|translate}}</p>
@@ -650,15 +647,15 @@
         </div>
         <div class="col-md-4">
           <h3>% Graph</h3>
-          <div id="hierar" style="border:3px solid black;width: 100%;height: 300px; "></div>
+          <div id="hierar" style="border:3px solid black;width:100%;height:300px;"></div>
         </div>
       </div>
       <div class="row">
-        <div class="col-md-12 well">
-          <h3>References</h3>
+        <div class="well">
+          <h3><span class="glyphicon glyphicon-user" aria-hidden="true"></span></h3>
           <ul>
-            <li>Page wikipedia de tideman</li>
-            <li>Tri topologique</li>
+            <li><a href="https://en.wikipedia.org/wiki/Ranked_pairs">Tideman</a></li>
+            <li><a href="https://en.wikipedia.org/wiki/Condorcet_method">Condorcet</a></li>
           </ul>
         </div>
       </div>
