@@ -38,6 +38,7 @@
         BTN_PARSE_VOTES :  'Parse the votes',
         BTN_COMPUTE_SCORES :  'Compute one-to-one scores',
         BTN_ADD_TO_GRAPH :  'Add one pair to the graph',
+        BTN_FIND_SOURCE :  'Extract a winner',
 
         P_PREFERENCES :  'Each person vote by expressing preference.',
         P_A_OVER_B :  'means the voter prefers A to B.',
@@ -70,6 +71,7 @@
         BTN_PARSE_VOTES :  'Extraire les votes',
         BTN_COMPUTE_SCORES :  'Calculer les résultats paire par paire',
         BTN_ADD_TO_GRAPH :  'Ajouter une paire au graphe',
+        BTN_FIND_SOURCE :  'Extraire un gagnant',
 
         P_PREFERENCES :  'Chaque électeur exprime ses préférences.',
         P_A_OVER_B :  'signifie que l\'électeur préfère A à B.',
@@ -654,7 +656,7 @@
         <div class="col-md-4">
           <h3>{{'RANKING'| translate}}</h3>
           <div ng-repeat="set in result">
-            <span class="btn btn-success"> {{$index+1}} </span> : <span class="badge badge-info" ng-repeat="candidate in set"> {{candidate}} </span>
+            <span class="label label-success"> {{$index+1}} </span> : <span class="badge badge-info" ng-repeat="candidate in set"> {{candidate}} </span>
           </div>
         </div>
         <div class="col-md-4">
