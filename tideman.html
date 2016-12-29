@@ -54,7 +54,16 @@
         This gives us a score for X>Y and another for Y>X.',
         P_25_OVER_12 : 'If 25 prefer X to Y and 12 prefer Y to X, we create a pair X > Y with the score 25-12=13.',
         P_10_OVER_12 : 'If 10 prefer X to Y and 12 prefer Y to X, we create a pair Y > X with the score 12-10=2.',
-        P_RANKING_PAIRS : 'Then, we sort X Y pairs greater scores first.'
+        P_RANKING_PAIRS : 'Then, we sort X Y pairs greater scores first.',
+
+        P_BUILD_GRAPH : 'We build a graph by adding pairs from the strongest to the weakest, unless it creates a cycle (displayed in red and then removed.',
+        P_INTUITION : 'The intuition is that a cycle is a contradiction. A wins over B who wins over C who wins over A makes it impossible to find a clear winner.',
+        P_CHOOSE_STRONG : 'In this situation, this method CHOOSES to ignore weak wins to favorise strong wins.',
+
+        P_EXTRACT_WINNER: 'The result is extracted by finding a candidate that has only wins (positive scores against all opponents). \
+        We successively remove all such nodes.',
+        P_CONDORCET: 'This method guarantees that if a candidate wins all one to one contests, he wins (this a called a Condorcet winner).',
+        P_PERCENTAGE_GRAPH : 'The % graph shows the percentage of voters who prefers the candidate. This is used to suggest the amplitude of the victory.'
       });
       $translateProvider.translations('fr', {
         LANGUAGE: 'Langue',
@@ -87,7 +96,15 @@
         Cela nous fournit un nombre de X>Y et un autre de Y>X.',
         P_25_OVER_12 : 'Si 25 personnes préfèrent X à Y et 12 prefèrent Y à X, on crée la paire X > Y avec le score de 25-12=13.',
         P_10_OVER_12 : 'Si 10 personnes préfèrent X à Y et 12 prefèrent Y à X, on crée la paire Y > X avec le score de 12-10=2.',
-        P_RANKING_PAIRS : 'On classe ensuite chaque paire X Y du plus grand score au plus petit.'
+        P_RANKING_PAIRS : 'On classe ensuite chaque paire X Y du plus grand score au plus petit.',
+
+        P_BUILD_GRAPH : 'On construit un graphe en commençant avec les paires à gros score. Si une paire crée un cycle (en rouge), on ne l\'ajoute pas',
+        P_INTUITION : 'L\'intuition est qu\'un cycle est une contradiction. A bat B qui bat C qui bat A, cela rend difficile de déclarer un gagnant.',
+        P_CHOOSE_STRONG : 'Cette méthode CHOISIT d\'ignorer les paires faibles pour éliminer ce type de contradiction.',
+
+        P_EXTRACT_WINNER: 'Le résultat est obtenu en extrayant les gagnants successivement (candidat avec uniquement des victoires).',
+        P_CONDORCET: 'Cette méthode garantit qu\'un candidat gagnant tous les duels va gagner (appelé gagnant de Condorcet).',
+        P_PERCENTAGE_GRAPH : 'Le graphe en % indique l\'ampleur des victoires.'
       });
       //$translateProvider.determinePreferredLanguage();
       $translateProvider.preferredLanguage('fr');
@@ -524,23 +541,12 @@
       <div class="row" id="input">
         <div class="col-md-5">
           <h3>{{'DATA' | translate}}</h3>
-          <p>
-            {{'P_PREFERENCES' | translate}}
-          </p>
-            <strong>A>B</strong> {{'P_A_OVER_B' | translate}}
-          </p>
-          <p>
-            <strong>C=D</strong> {{'P_C_EQUAL_D' | translate}}
-          </p>
-          <p>
-            <strong>E>C=D>A</strong>  {{'P_E_CD_A' | translate}}
-          </p>
-          <p>
-            <strong>123:A>B</strong> {{'P_123_MEANS'| translate}}
-          </p>
-          <p>
-            {{'P_EACH_LINE' | translate}}
-          </p>
+          <p>{{'P_PREFERENCES' | translate}}</p>
+          <p><strong>A>B</strong> {{'P_A_OVER_B' | translate}}</p>
+          <p><strong>C=D</strong> {{'P_C_EQUAL_D' | translate}}</p>
+          <p><strong>E>C=D>A</strong>  {{'P_E_CD_A' | translate}}  </p>
+          <p><strong>123:A>B</strong> {{'P_123_MEANS'| translate}}</p>
+          <p>{{'P_EACH_LINE' | translate}}</p>
         </div>
         <div class="col-md-7 well" >
             <textarea style="width:100%; height:200px" ng-model="votes"></textarea>
@@ -549,14 +555,12 @@
       <hr/>
       <div class="row" id="votes">
         <div class="col-md-4">
+          <button class="btn btn-primary btn-block" ng-click="parseVotes();" ng-disabled="timeoutOn" >{{'BTN_PARSE_VOTES' | translate}}</button>
           <h3>{{'VOTES' | translate}}</h3>
-          <p>
-            {{'P_EXTRACT_VOTES' | translate}}
-          </p>
+          <p>{{'P_EXTRACT_VOTES' | translate}}</p>
           <!--<div ng-repeat="parsed in parsedVotes">
             {{parsed | json}}
           </div>-->
-          <button class="btn btn-primary btn-block" ng-click="parseVotes();" ng-disabled="timeoutOn" >{{'BTN_PARSE_VOTES' | translate}}</button>
         </div>
         <div class="col-md-8" >
 
@@ -591,12 +595,12 @@
       <hr/>
       <div class="row" id="scores">
         <div class="col-md-5">
+          <button class="btn btn-primary btn-block" ng-click="computeScores();" ng-disabled="timeoutOn || !parsedVotes.length>0">{{'BTN_COMPUTE_SCORES' | translate}}</button>
           <h3>{{'ONE_TO_ONE_SCORES'| translate}}</h3>
           <p>{{'P_POSSIBLE_CONFRONTATIONS'| translate}}</p>
           <p>{{'P_25_OVER_12'| translate}}</p>
           <p>{{'P_10_OVER_12'| translate}}</p>
           <p>{{'P_RANKING_PAIRS'| translate}}</p>
-          <button class="btn btn-primary btn-block" ng-click="computeScores();" ng-disabled="timeoutOn || !parsedVotes.length>0">{{'BTN_COMPUTE_SCORES' | translate}}</button>
         </div>
         <div  class="col-md-7" >
 
@@ -620,18 +624,11 @@
       <hr/>
       <div class="row" id="graph" >
         <div class="col-md-6">
-          <h3>{{'NO_CONTRADICTION_GRAPH' | translate}}</h3>
-          <p>
-            Then we build a graph, by adding pairs from the strongest to the weakest, unless
-            it creates a cycle, then displayed in red.
-          </p>
-          <p>
-            The intuition is that such a cycle is a contradiction. A wins over B who wins over C who wins over A makes it impossible to find a clear winner.
-          </p>
-          <p>
-            In this situation, this method <strong>chooses</strong> to ignore weak wins to favorise strong wins.
-          </p>
           <button class="btn btn-primary btn-block" ng-click="addPair();" ng-disabled="timeoutOn || !scores.length>0 ||allGreens()">{{'BTN_ADD_TO_GRAPH' | translate}}</button>
+          <h3>{{'NO_CONTRADICTION_GRAPH' | translate}}</h3>
+          <p>{{'P_BUILD_GRAPH'|translate}}</p>
+          <p>{{'P_INTUITION'|translate}}</p>
+          <p>{{'P_CHOOSE_STRONG'|translate}}</p>
         </div>
         <div id="graph" class="col-md-6">
           <div id="mynetwork" style="border:3px solid black;width: 100%;height: 300px; "></div>
@@ -639,19 +636,11 @@
       </div>
       <div class="row">
         <div class="col-md-4 ">
-          <h3>{{'RESULT'|translate}}</h3>
-          <p>
-            The result is extracted by finding a candidate that has only wins (positive scores against all opponents).
-            We successively remove all such nodes in order.
-          </p>
-          <p>
-            This method guarantees that if a candidate wins all one to one contests, he wins (this a called a Condorcet winner).
-          </p>
-          <p>
-            The % graph shows the percentage of voters who prefers the candidate.
-            This is used to suggest the amplitude of the victory.
-          </p>
           <button ng-click="showSources()" class="btn btn-primary btn-block" ng-disabled="timeoutOn || !allGreens() || allDone()">{{'BTN_FIND_SOURCE' | translate}}</button>
+          <h3>{{'RESULT'|translate}}</h3>
+          <p>{{'P_EXTRACT_WINNER'|translate}}</p>
+          <p>{{'P_CONDORCET'|translate}}</p>
+          <p>{{'P_PERCENTAGE_GRAPH'|translate}}</p>
         </div>
         <div class="col-md-4">
           <h3>{{'RANKING'| translate}}</h3>
