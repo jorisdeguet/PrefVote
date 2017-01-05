@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Vote alternatif</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.17.0/vis.min.css" rel="stylesheet" type="text/css" />
+  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+  <style>
+    .dimmed {
+      opacity: 0.2;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.17.0/vis.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.6.0/angular.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/angular-translate/2.13.1/angular-translate.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-smooth-scroll/2.0.0/jquery.smooth-scroll.min.js"></script>
+  <script>
+    $(document).ready(function(){
+      $('a').smoothScroll();
+    });
+    // could use http://cpettitt.github.io/project/dagre-d3/latest/demo/interactive-demo.html for graph
+    var app = angular.module('PreferentialDemo', ['pascalprecht.translate']);
+    app.config(function ($translateProvider) {
+      $translateProvider.translations('en', {
+        LANGUAGE: 'Language',
+        EXAMPLES: 'Examples',
+        DATA: 'Data',
+        VOTES: 'Votes',
+        SCORES: 'Scores',
+        ONE_TO_ONE_SCORES : 'One to one scores (or pairs)',
+        GRAPH: 'Graph',
+        NO_CONTRADICTION_GRAPH: 'The no-contradiction graph',
+        RESULT: 'Results',
+        RANKING : 'Ranking',
+
+        BTN_PARSE_VOTES :  'Parse the votes',
+        BTN_COMPUTE_SCORES :  'Compute one-to-one scores',
+        BTN_ADD_TO_GRAPH :  'Add one pair to the graph',
+        BTN_FIND_SOURCE :  'Extract a winner',
+
+        P_PREFERENCES :  'Each person vote by expressing preference.',
+        P_A_OVER_B :  'means the voter prefers A to B.',
+        P_C_EQUAL_D : 'means the voter likes them the same.',
+        P_E_CD_A :'means E is the first choice, then C and D are the second choice and A would be the worst.',
+        P_123_MEANS :'means 123 people have expressed the "A>B" vote.',
+        P_EACH_LINE :'Each line corresponds to a different preferential vote with the number of people voting it.',
+
+        P_EXTRACT_VOTES : 'We extract the votes from the provided text.',
+
+        P_POSSIBLE_CONFRONTATIONS : 'Then we imagine all possible confrontation between two candidates X and Y.\
+        For each vote we count if the voter prefers X to Y of the opposite.\
+        This gives us a score for X>Y and another for Y>X.',
+        P_25_OVER_12 : 'If 25 prefer X to Y and 12 prefer Y to X, we create a pair X > Y with the score 25-12=13.',
+        P_10_OVER_12 : 'If 10 prefer X to Y and 12 prefer Y to X, we create a pair Y > X with the score 12-10=2.',
+        P_RANKING_PAIRS : 'Then, we sort X Y pairs greater scores first.',
+
+        P_BUILD_GRAPH : 'We build a graph by adding pairs from the strongest to the weakest, unless it creates a cycle (displayed in red and then removed.',
+        P_INTUITION : 'The intuition is that a cycle is a contradiction. A wins over B who wins over C who wins over A makes it impossible to find a clear winner.',
+        P_CHOOSE_STRONG : 'In this situation, this method CHOOSES to ignore weak wins to favorise strong wins.',
+
+        P_EXTRACT_WINNER: 'The result is extracted by finding a candidate that has only wins (positive scores against all opponents). \
+        We successively remove all such nodes.',
+        P_CONDORCET: 'This method guarantees that if a candidate wins all one to one contests, he wins (this a called a Condorcet winner).',
+        P_PERCENTAGE_GRAPH : 'The % graph shows the percentage of voters who prefers the candidate. This is used to suggest the amplitude of the victory.'
+      });
+      $translateProvider.translations('fr', {
+        LANGUAGE: 'Langue',
+        EXAMPLES: 'Exemples',
+        DATA: 'Données',
+        VOTES: 'Votes',
+        SCORES: 'Scores',
+        ONE_TO_ONE_SCORES : 'Score pour chaque couple de candidats (ou "paires")',
+        GRAPH: 'Graphe',
+        NO_CONTRADICTION_GRAPH: 'Le graphe sans contradiction',
+        RESULT: 'Résultats',
+        RANKING : 'Classement',
+
+        BTN_PARSE_VOTES :  'Extraire les votes',
+        BTN_COMPUTE_SCORES :  'Calculer les résultats paire par paire',
+        BTN_ADD_TO_GRAPH :  'Ajouter une paire au graphe',
+        BTN_FIND_SOURCE :  'Extraire un gagnant',
+
+        P_PREFERENCES :  'Chaque électeur exprime ses préférences.',
+        P_A_OVER_B :  'signifie que l\'électeur préfère A à B.',
+        P_C_EQUAL_D : 'signifie que l\'électeur les situe au même niveau.',
+        P_E_CD_A :'signifie que l\'électeur préfère E puis C et D indifféremment et enfin A.',
+        P_123_MEANS :'signifie que 123 personnes ont exprimé le vote "A>B".',
+        P_EACH_LINE :'Chaque ligne correspond à un ordre de préférence et au nombre d\'électeurs l\'ayant choisi.',
+
+        P_EXTRACT_VOTES : 'On extrait les votes à partir du texte fourni.',
+
+        P_POSSIBLE_CONFRONTATIONS : 'On imagine toutes les confrontations entre 2 candidats X and Y.\
+        Pour chaque électeur, on compte s\'il préfère X à Y, le contraire ou si ça lui est égal.\
+        Cela nous fournit un nombre de X>Y et un autre de Y>X.',
+        P_25_OVER_12 : 'Si 25 personnes préfèrent X à Y et 12 prefèrent Y à X, on crée la paire X > Y avec le score de 25-12=13.',
+        P_10_OVER_12 : 'Si 10 personnes préfèrent X à Y et 12 prefèrent Y à X, on crée la paire Y > X avec le score de 12-10=2.',
+        P_RANKING_PAIRS : 'On classe ensuite chaque paire X Y du plus grand score au plus petit.',
+
+        P_BUILD_GRAPH : 'On construit un graphe en commençant avec les paires à gros score. Si une paire crée un cycle (en rouge), on ne l\'ajoute pas',
+        P_INTUITION : 'L\'intuition est qu\'un cycle est une contradiction. A bat B qui bat C qui bat A, cela rend difficile de déclarer un gagnant.',
+        P_CHOOSE_STRONG : 'Cette méthode CHOISIT d\'ignorer les paires faibles pour éliminer ce type de contradiction.',
+
+        P_EXTRACT_WINNER: 'Le résultat est obtenu en extrayant les gagnants successivement (candidat avec uniquement des victoires).',
+        P_CONDORCET: 'Cette méthode garantit qu\'un candidat gagnant tous les duels va gagner (appelé gagnant de Condorcet).',
+        P_PERCENTAGE_GRAPH : 'Le graphe en % indique l\'ampleur des victoires.'
+      });
+      //$translateProvider.determinePreferredLanguage();
+      $translateProvider.preferredLanguage('fr');
+    });
+    app.controller('PrefController', function ($window,$scope, $http,$filter ,$timeout,$anchorScroll,$translate,$location) {
+        console.log("locale "+ $location.search().l);
+        console.log($location.search());
+        
+        $scope.colors = ['rgb(255,80,5)','rgb(43,206,72)','rgb(194,0,136)',
+                        'rgb(0,117,220)','rgb(245,158,177)','rgb(0,153,143)',
+                         'rgb(200,200,0)','rgb(240,163,255)',
+                         'rgb(255,164,5)','rgb(255,0,16)',
+                        ];
+        
+        $scope.votes = "5:A>C>B>E>D\n5:A>D>E>C>B\n8:B>E>D>A>C\n3:C>A>B>E>D\n"+
+        "7:C>A>E>B>D\n2:C>B>A>D>E\n7:D>C>E>B>A\n8:E>B>A>D>C";
+        $scope.memphis = function(){
+          $scope.votes =
+          "42:Memphis>Nashville>Chattanooga>Knoxville\n"+
+          "26:Nashville>Chattanooga>Knoxville>Memphis\n"+
+          "15:Chattanooga>Knoxville>Nashville>Memphis\n"+
+          "17:Knoxville>Chattanooga>Nashville>Memphis\n";
+          $scope.init();
+        }
+        $scope.init = function(){
+          $scope.parsedVotes = [];
+          $scope.scores = [];
+          $scope.result = [];
+          $scope.candidates = [];
+          $scope.candidatesSet = [];
+          $scope.greens = [];
+          $scope.percentages = [];
+        }
+        $scope.init();
+        $scope.labelForID = function(id){
+          for (var i = 0 ; i < $scope.candidates.length ; i++){
+            var candA = $scope.candidates[i];
+            if (candA.id === id) return candA.label;
+          }
+        }
+        $scope.changeLanguage = function (key) {
+          $translate.use(key);
+        };
+        $scope.parseVotes = function(){
+          $scope.message = "We take the textual votes and add them"
+          $scope.init();
+          var lines = $scope.votes.split("\n");
+          var cand = [];
+          for (var i = 0 ; i< lines.length ; i++){
+            var numberAndVote = lines[i].split(":");
+            if (numberAndVote.length != 2) continue;
+            var number = Number(numberAndVote[0]);
+            var vote = numberAndVote[1];
+            var candidates = vote.split(">");
+            var newVote = {number:number , vote:[]};
+            for (var c = 0 ; c < candidates.length ; c++){
+              var candidate = candidates[c].trim();
+              // if it contains =
+              if (candidate.indexOf('=') > -1){
+                var exaequo = candidate.split('=');
+                var set = [];
+                for (var ex = 0 ; ex < exaequo.length ; ex++){
+                  var exOne = exaequo[ex];
+                  exOne = exOne.trim();
+                  set.push(exOne);
+                  cand.push(exOne);
+                }
+                newVote.vote.push(set);
+              }
+              else{
+                cand.push(candidate);
+                newVote.vote.push([candidate]);
+              }
+            }
+            $scope.parsedVotes.push(newVote);
+            console.log("Vote is "+newVote.number+"  :: "+ newVote.vote);
+          }
+          cand.sort();
+          console.log(cand);
+          $scope.candidatesSet = Array.from(new Set(cand));
+          var id = 1;
+          for (var i = 0 ; i < $scope.candidatesSet.length ; i++){
+            var candA = $scope.candidatesSet[i];
+            var node = {id:(i+1),label:candA, pct:10, color:$scope.colors[i]};
+            $scope.candidates.push(node);
+            console.log("ADD a node");
+            $scope.visNodes.add(node);
+          }
+          console.log($scope.candidatesSet);
+          $.smoothScroll({scrollTarget: '#votes'});
+          //$anchorScroll('votes');
+        };
+
+        $scope.isFirstActive = function(vote, candidat){
+            if (!$scope.isActive(candidat)) {
+                return false;
+            }
+            for (var rank = 0 ; rank < vote.length ; rank++){
+                var set = vote[rank];
+                if (set.indexOf(candidat) > -1) return true;
+                for (var s = 0 ; s < set.length ; s++){
+                    var c = set[s];
+                    if ($scope.isActive(c)) return false;
+                }
+            }
+            return true;
+        }
+        
+        $scope.indexOf = function(vote, candidat){
+          for (var rank = 0 ; rank < vote.length ; rank++){
+            var set = vote[rank];
+            if (set.indexOf(candidat) > -1) return rank;
+          }
+          return -1;
+        }
+        
+        $scope.computePercentages = function(){
+            for (var c = 0 ; c < $scope.candidates.length ; c++){
+                var candidate = $scope.candidates[c];
+                var count = 0;
+                for (var v = 0 ; v < $scope.parsedVotes.length ; v++){
+                    var vote = $scope.parsedVotes[v];
+                    if ($scope.indexOf(vote.vote,candidate.label) == 0){
+                        count += vote.number;
+                    }
+                }
+                var pct = count*100/$scope.totalVoters();
+                var percentage = {
+                    label:candidate.label,
+                    color:candidate.color,
+                    count:count,
+                    total:count,
+                    pct:pct,
+                    totalpct:pct,
+                    recovered:[],
+                    active:true};
+                $scope.percentages.push(percentage);
+            }
+            $scope.percentages.sort(
+                function(p1,p2){
+                    return p2.total - p1.total;
+                }
+            );
+        }
+        
+        $scope.findLoser = function(){
+            var min = $scope.totalVoters();
+            var loser;
+            for (var p = 0 ; p < $scope.percentages.length ; p++){
+                var percentage = $scope.percentages[p];
+                if (percentage.active && percentage.totalpct < min){
+                    loser = percentage;
+                    min = percentage.totalpct;
+                }
+            }
+            console.log("Loser "+ loser.label);
+            loser.active = false;
+            $scope.result.unshift([loser.label]);
+            // got to compute how other recover some votes
+            for (var p = 0 ; p < $scope.percentages.length ; p++){
+                var percentage = $scope.percentages[p];
+                var count = 0;
+                for (var v = 0 ; v < $scope.parsedVotes.length ; v++){
+                    var vote = $scope.parsedVotes[v];
+                    if ($scope.isFirstActive(vote.vote,percentage.label)){
+                        count += vote.number;
+                    }
+                }
+                if (count > percentage.total){
+                    var pct = 100*(count-percentage.total)/$scope.totalVoters();
+                    console.log(percentage.label+" wins "+(count-percentage.total));
+                    percentage.recovered.push({color:loser.color,pct:pct});
+                    percentage.total = count;
+                    percentage.totalpct = 100*(count)/$scope.totalVoters();
+                    if (percentage.totalpct > 50){
+                        //alert(percentage.label + " wins");
+                        
+                    }
+                }
+            }
+            $scope.percentages.sort(
+                function(p1,p2){
+                    return p2.total - p1.total;
+                }
+            );
+        }
+        
+        $scope.computeScores = function(){
+          $scope.message = "For each pair of candidate, we go through votes to see who wins"
+          $scope.scores = [];
+          $.smoothScroll({scrollTarget: '#scores'});
+          //$anchorScroll('scores');
+        }
+
+        
+        $scope.allGreens = function() {return $scope.current > $scope.scores.length-1;}
+        $scope.noGreens = function()  {return $scope.greens.length < 1;}
+        
+        $scope.colorFor = function(label){
+            for (var c = 0 ; c < $scope.candidates.length ; c++){
+                var candidate = $scope.candidates[c];
+                if (candidate.label == label) return candidate.color;
+            }
+            return 'black';
+        }
+        
+        $scope.isActive = function(label){
+            for (var p = 0 ; p < $scope.percentages.length ; p++){
+                var percentage = $scope.percentages[p];
+                if (label == percentage.label){
+                    return percentage.active;
+                }
+            }
+            return true;
+        }
+        $scope.result = [];
+        // remove a source from the green graph and add it to the result (part of the topo sort)
+        $scope.totalVoters = function(){
+          var n = 0 ;
+          for (var v = 0 ; v < $scope.parsedVotes.length ; v++){
+            n += $scope.parsedVotes[v].number;
+          }
+          return n;
+        }
+        $scope.allDone = function(){
+          for (var c = 0 ; c < $scope.candidates.length ; c++){
+            var candidate = $scope.candidates[c];
+            if ($scope.indexOf($scope.result,candidate.label) < 0){
+              return false;
+            }
+          }
+          return true;
+        }
+        console.log("Started controller");
+        $scope.visNodes = new vis.DataSet($scope.candidates);
+        $scope.visEdges = new vis.DataSet($scope.scores);
+        
+    });
+  </script>
+</head>
+<body ng-app="PreferentialDemo" ng-controller="PrefController" style="position:relative;padding-bottom:50px;" data-spy="scroll" data-offset="70" data-target=".navbar">
+  <nav class="navbar navbar-inverse navbar-fixed-bottom" id="navb">
+    <div class="container">
+      <div class="navbar-header">
+        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navnav" aria-expanded="false">
+          <span class="sr-only">Toggle navigation</span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a href="https://en.wikipedia.org/wiki/Instant-runoff_voting" class="navbar-brand">Vote alternatif</a>
+      </div>
+      <div class="collapse navbar-collapse" id="navnav">
+        <ul class="nav navbar-nav">
+          <li><a href="#input">{{'DATA'|translate}}</a></li>
+          <li><a href="#votes">{{'VOTES'|translate}}</a></li>
+          <li><a href="#scores">{{'SCORES'|translate}}</a></li>
+          <li><a href="#result">{{'RESULT'|translate}}</a></li>
+        </ul>
+        <ul class="nav navbar-nav navbar-right">
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+              {{'EXAMPLES' | translate}} <span class="caret"></span></a>
+            <ul class="dropdown-menu">
+              <li><a ng-click="memphis()">Memphis Chattanooga</a></li>
+            </ul>
+          </li>
+        </ul>
+        <ul class="nav navbar-nav navbar-right">
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+              {{'LANGUAGE' | translate}} <span class="caret"></span></a>
+            <ul class="dropdown-menu">
+              <li><a ng-click="changeLanguage('fr')">Français</a></li>
+              <li><a ng-click="changeLanguage('en')">English</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div><!-- /.navbar-collapse -->
+    </div><!-- /.container-fluid -->
+    </nav>
+    <div class="container" >
+      <div class="row" id="input">
+        <div class="col-md-5">
+          <h3>{{'DATA' | translate}}</h3>
+          <p>{{'P_PREFERENCES' | translate}}</p>
+          <p><strong>A>B</strong> {{'P_A_OVER_B' | translate}}</p>
+          <p><strong>C=D</strong> {{'P_C_EQUAL_D' | translate}}</p>
+          <p><strong>E>C=D>A</strong>  {{'P_E_CD_A' | translate}}  </p>
+          <p><strong>123:A>B</strong> {{'P_123_MEANS'| translate}}</p>
+          <p>{{'P_EACH_LINE' | translate}}</p>
+        </div>
+        <div class="col-md-7 well" >
+            <textarea style="width:100%; height:200px" ng-model="votes"></textarea>
+        </div>
+      </div>
+      <div class="row" id="votes">
+        <button class="btn btn-primary btn-block" ng-click="parseVotes();" ng-disabled="timeoutOn" >{{'BTN_PARSE_VOTES' | translate}} <span class="glyphicon glyphicon-arrow-down" aria-hidden="true"></span></button>
+        <div class="col-md-4">
+          <h3>{{'VOTES' | translate}}</h3>
+          <p>{{'P_EXTRACT_VOTES' | translate}}</p>
+          <!--<div ng-repeat="parsed in parsedVotes">
+            {{parsed | json}}
+          </div>-->
+        </div>
+        <div class="col-md-8" >
+
+          <table class="table table-condensed table-striped">
+            <tr ng-repeat="vote in parsedVotes">
+              <td>{{vote.number}} <span class="glyphicon glyphicon-user" aria-hidden="true"></span></td>
+              <td>
+                <span ng-repeat="v in vote.vote">
+                  <span ng-hide="$index == 0" class="glyphicon glyphicon-triangle-right" aria-hidden="true"></span>
+                  <span ng-repeat="c in v" ng-class="!isActive(c)?'label label-default dimmed':'label label-default'" style="background:{{colorFor(c)}}">
+                    {{c}}
+                  </span>
+                </span>
+
+              </td>
+              
+            </tr>
+            <tr ng-show="highlightFrom">
+              <td></td><td></td>
+              <td>{{score.countW}} {{highlightFrom}}</td>
+              <td>{{score.countL}} {{highlightTo}}</td>
+            </tr>
+          </table>
+        </div>
+
+      </div>
+      <div class="row" id="scores">
+        <button class="btn btn-primary btn-block" ng-click="computePercentages();" ng-disabled="timeoutOn || !parsedVotes.length>0">{{'BTN_COMPUTE_INITIAL' | translate}} <span class="glyphicon glyphicon-arrow-down" aria-hidden="true"></span></button>
+        <div class="col-md-5">
+          <h3>{{'RACE_TO_50'| translate}}</h3>
+          <p>{{'P_POSSIBLE_CONFRONTATIONS'| translate}}</p>
+          <p>{{'P_25_OVER_12'| translate}}</p>
+          <p>{{'P_10_OVER_12'| translate}}</p>
+          <p>{{'P_RANKING_PAIRS'| translate}}</p>
+            <button class="btn btn-primary btn-block" ng-click="findLoser();" ng-disabled="timeoutOn ">{{'BTN_ELIMINATE_LOSER' | translate}} <span class="glyphicon glyphicon-arrow-down" aria-hidden="true"></span></button>
+        </div>
+        <div  class="col-md-7" >
+
+          <table class="table table-condensed table-striped" >
+            <tr ng-repeat="percentage in percentages ">
+              <td style="width:80%;" ng-class="percentage.active?'':'dimmed'">
+                <div class="progress">
+                  <div class="progress-bar progress-bar-success" style="background:{{percentage.color}};width: {{percentage.pct}}%">
+                    <span>{{percentage.label}}</span>
+                  </div>
+                  <div ng-repeat="r in percentage.recovered" class="progress-bar progress-bar-warning progress-bar-striped" style="width: {{r.pct}}%;background:{{r.color}}">
+                    {{r.label}}
+                  </div>
+                </div>
+              </td>
+              <td> {{percentage.totalpct | number:2}}% {{percentage.active}}</td>    
+            </tr>
+          </table>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-6 ">
+          <h3>{{'RESULT'|translate}}</h3>
+          <p>We can consider that the final order is made with successful elimination and then the order when winner passes 50</p>
+          
+        </div>
+        <div class="col-md-6">
+          <h3>{{'RANKING'| translate}}</h3>
+          <div ng-repeat="set in result">
+            <span class="label label-success"> {{$index+1}} </span> : <span class="badge badge-info" ng-repeat="candidate in set"> {{candidate}} </span>
+          </div>
+        </div>
+        
+      </div>
+      <div class="row">
+        <div class="well">
+          <h3><span class="glyphicon glyphicon-user" aria-hidden="true"></span></h3>
+          <ul>
+            <li><a href="https://en.wikipedia.org/wiki/Ranked_pairs">Tideman</a></li>
+            <li><a href="https://en.wikipedia.org/wiki/Condorcet_method">Condorcet</a></li>
+              <li>color palette from https://eleanormaclure.files.wordpress.com/2011/03/colour-coding.pdf</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+</body>
+</html>
