@@ -208,6 +208,7 @@
             }
 
             $scope.computePercentages = function () {
+                $scope.done = false;
                 $scope.percentages = [];
                 for (var c = 0; c < $scope.candidates.length; c++) {
                     var candidate = $scope.candidates[c];
