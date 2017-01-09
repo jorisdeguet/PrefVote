@@ -42,7 +42,7 @@
                 , P_A_OVER_B: 'means the voter prefers A to B.'
                 , P_C_EQUAL_D: 'means the voter likes them the same.'
                 , P_E_CD_A: 'means E is the first choice, then C and D are the second choice and A would be the worst.'
-                , P_123_MEANS: 'means 123 people have expressed the "A>B" vote.'
+                , P_123_MEANS: 'means 123 people have expressed the "A and then B" vote.'
                 , P_EACH_LINE: 'Each line corresponds to a different preferential vote with the number of people voting it.',
 
                 P_EXTRACT_VOTES: 'We extract the votes from the provided text.',
@@ -69,7 +69,7 @@
                 , P_A_OVER_B: 'signifie que l\'électeur préfère A à B.'
                 , P_C_EQUAL_D: 'signifie que l\'électeur les situe au même niveau.'
                 , P_E_CD_A: 'signifie que l\'électeur préfère E puis C et D indifféremment et enfin A.'
-                , P_123_MEANS: 'signifie que 123 personnes ont exprimé le vote "A>B".'
+                , P_123_MEANS: 'signifie que 123 personnes ont exprimé le vote A puis B.'
                 , P_EACH_LINE: 'Chaque ligne correspond à un ordre de préférence et au nombre d\'électeurs l\'ayant choisi.',
 
                 P_EXTRACT_VOTES: 'On extrait les votes à partir du texte fourni.',
@@ -231,6 +231,10 @@
                         , recovered: []
                         , active: true
                     };
+                    if (percentage.totalpct > 50) {
+                        //alert(percentage.label + " wins");
+                        $scope.done = true;
+                    }
                     $scope.percentages.push(percentage);
                 }
                 $scope.percentages.sort(
@@ -378,8 +382,8 @@
                 <h3>{{'DATA' | translate}}</h3>
                 <p>{{'P_PREFERENCES' | translate}}</p>
                 <p><strong>A>B</strong> {{'P_A_OVER_B' | translate}}</p>
-                <p><strong>C=D</strong> {{'P_C_EQUAL_D' | translate}}</p>
-                <p><strong>E>C=D>A</strong> {{'P_E_CD_A' | translate}} </p>
+                <!--<p><strong>C=D</strong> {{'P_C_EQUAL_D' | translate}}</p>
+                <p><strong>E>C=D>A</strong> {{'P_E_CD_A' | translate}} </p>-->
                 <p><strong>123:A>B</strong> {{'P_123_MEANS'| translate}}</p>
                 <p>{{'P_EACH_LINE' | translate}}</p>
             </div>
@@ -456,6 +460,7 @@
                     <li><a href="https://en.wikipedia.org/wiki/Instant-runoff_voting">Alternate voting on Wikipedia</a></li>
                     <li><a href="https://en.wikipedia.org/wiki/Ranked_voting_system">Ranked vote</a></li>
                     <li>color palette reference https://eleanormaclure.files.wordpress.com/2011/03/colour-coding.pdf</li>
+                    <li><a href="http://www1.cse.wustl.edu/~legrand/rbvote/desc.html">a major inspiration</a> </li>
                 </ul>
             </div>
         </div>
