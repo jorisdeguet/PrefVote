@@ -134,7 +134,8 @@
                 var lines = $scope.votes.split("\n");
                 var cand = [];
                 for (var i = 0; i < lines.length; i++) {
-                    var numberAndVote = lines[i].split(":");
+                    var withoutComment = lines[i].split("#")[0];
+                    var numberAndVote = withoutComment.split(":");
                     if (numberAndVote.length != 2) continue;
                     var number = Number(numberAndVote[0]);
                     var vote = numberAndVote[1];
@@ -161,7 +162,7 @@
                             newVote.vote.push([candidate]);
                         }
                     }
-                    newVote.activeChoice = newVote.vote[0][0];
+                    newVote.activeChoice = [newVote.vote[0][0]];
                     $scope.parsedVotes.push(newVote);
                 }
                 cand.sort();
@@ -247,14 +248,15 @@
                 });
             }
             
-            $scope.activeChoiceFor = function(vote){
+            $scope.activeChoicesFor = function(vote){
+                var actives = [];
                 for (var c = 0; c < $scope.candidates.length; c++) {
                     var candidate = $scope.candidates[c];
                     if ($scope.isFirstActive(vote.vote, candidate.label)) {
-                        return candidate.label;
+                        actives.push(candidate.label);
                     }
                 }
-                return undefined;
+                return actives;
             }
 
             $scope.findLoser = function () {
@@ -276,7 +278,7 @@
                     var count = 0;
                     for (var v = 0; v < $scope.parsedVotes.length; v++) {
                         var vote = $scope.parsedVotes[v];
-                        vote.activeChoice = $scope.activeChoiceFor(vote);
+                        vote.activeChoice = $scope.activeChoicesFor(vote);
                         if ($scope.isFirstActive(vote.vote, percentage.label)) {
                             count += vote.number;
                         }
@@ -413,7 +415,7 @@
                             </span>
                         </td>
                         <td>
-                            <span>{{vote.number}}</span> for <span class="label label-default" style="background:{{colorFor(vote.activeChoice)}}">{{vote.activeChoice}}</span>   
+                            <span>{{vote.number}}</span> :: <span ng-repeat="active in vote.activeChoice" class="label label-default" style="background:{{colorFor(active)}}">{{active}}</span>   
                         </td>
                     </tr>
                 </table>

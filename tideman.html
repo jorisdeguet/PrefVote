@@ -157,7 +157,8 @@
           var lines = $scope.votes.split("\n");
           var cand = [];
           for (var i = 0 ; i< lines.length ; i++){
-            var numberAndVote = lines[i].split(":");
+            var withoutComment = lines[i].split("#")[0];
+            var numberAndVote = withoutComment.split(":");
             if (numberAndVote.length != 2) continue;
             var number = Number(numberAndVote[0]);
             var vote = numberAndVote[1];
