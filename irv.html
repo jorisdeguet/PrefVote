@@ -79,14 +79,14 @@
         </div>
         <div class="row" id="votes">
             <button class="btn btn-primary btn-block" ng-click="parseVotes();" ng-disabled="timeoutOn">{{'BTN_PARSE_VOTES' | translate}} <span class="glyphicon glyphicon-arrow-down" aria-hidden="true"></span></button>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <h3>{{'VOTES' | translate}}</h3>
                 <p>{{'P_EXTRACT_VOTES' | translate}}</p>
                 <!--<div ng-repeat="parsed in parsedVotes">
             {{parsed | json}}
           </div>-->
             </div>
-            <div class="col-md-8">
+            <div class="col-md-9">
                 <table class="table table-condensed table-striped">
                     <tr ng-repeat="vote in parsedVotes">
                         <td>{{vote.number}} <span class="glyphicon glyphicon-user" aria-hidden="true"></span></td>
