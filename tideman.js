@@ -2,9 +2,9 @@ $(document).ready(function(){
   $('a').smoothScroll();
 });
 // could use http://cpettitt.github.io/project/dagre-d3/latest/demo/interactive-demo.html for graph
-var app = angular.module('PreferentialDemo', ['pascalprecht.translate']);
+var app = angular.module('PreferentialDemo', ['pascalprecht.translate','ngSanitize']);
 app.config(function ($translateProvider) {
-  $translateProvider.useSanitizeValueStrategy('escape');
+  $translateProvider.useSanitizeValueStrategy(null);
   $translateProvider.translations('en', {
     LANGUAGE: 'Language',
     EXAMPLES: 'Examples',
